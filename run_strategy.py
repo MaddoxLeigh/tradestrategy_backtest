@@ -102,6 +102,30 @@ def main():
     print(f"Average Trade Return: {results['avg_trade_return']:.2%}")
     print(f"Profit Factor: {results['profit_factor']:.2f}")
     
+    # Print detailed trade list
+    if 'trades' in results and not results['trades'].empty:
+        print("\nDetailed Trade List:")
+        print("-" * 100)
+        trades_df = results['trades'].copy()
+        
+        # Format the trades DataFrame for better readability
+        trades_df['entry_date'] = trades_df['entry_date'].dt.strftime('%Y-%m-%d')
+        trades_df['exit_date'] = trades_df['exit_date'].dt.strftime('%Y-%m-%d')
+        trades_df['entry_price'] = trades_df['entry_price'].round(2)
+        trades_df['exit_price'] = trades_df['exit_price'].round(2)
+        trades_df['return'] = (trades_df['return'] * 100).round(2)
+        trades_df['position'] = trades_df['position'].map({1: 'LONG', -1: 'SHORT'})
+        
+        # Calculate position size (1% of initial capital)
+        position_size = 100000.0 * 0.01
+        trades_df['position_size'] = position_size
+        
+        # Print the formatted trades
+        print(trades_df[['entry_date', 'exit_date', 'position', 'entry_price', 'exit_price', 
+                        'position_size', 'return']].to_string(index=False))
+    else:
+        print("\nNo trades were executed during the backtest period.")
+    
     # Plot results
     backtester.plot_results(results)
 

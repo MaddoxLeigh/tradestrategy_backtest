@@ -4,8 +4,8 @@ from typing import Dict, Any
 from src.strategies.base_strategy import BaseStrategy
 import logging
 from datetime import datetime
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -57,9 +57,12 @@ class Backtester:
             # Track trades
             trades = []
             current_trade = None
+            current_position_size = self.initial_capital * 0.01  # 1% position size
             
             # Calculate returns and track trades
             portfolio['returns'] = 0.0
+            portfolio['portfolio_value'] = self.initial_capital
+            
             for i in range(1, len(portfolio)):
                 current_date = portfolio.index[i]
                 prev_date = portfolio.index[i-1]
@@ -70,8 +73,15 @@ class Backtester:
                     if current_trade is not None:
                         current_trade['exit_date'] = current_date
                         current_trade['exit_price'] = portfolio.loc[current_date, 'close']
-                        current_trade['return'] = (current_trade['exit_price'] / current_trade['entry_price'] - 1) * current_trade['position']
+                        trade_return = (current_trade['exit_price'] / current_trade['entry_price'] - 1) * current_trade['position']
+                        current_trade['return'] = trade_return
+                        current_trade['position_size'] = current_position_size
                         trades.append(current_trade)
+                        
+                        # Update portfolio value with trade return
+                        portfolio.loc[current_date, 'portfolio_value'] = (
+                            portfolio.loc[prev_date, 'portfolio_value'] * (1 + trade_return * 0.01)
+                        )
                     
                     # Start new trade
                     if portfolio.loc[current_date, 'position'] != 0:
@@ -82,31 +92,37 @@ class Backtester:
                         }
                     else:
                         current_trade = None
+                        portfolio.loc[current_date, 'portfolio_value'] = portfolio.loc[prev_date, 'portfolio_value']
                 
                 # Calculate daily returns
                 if current_trade is not None:
-                    portfolio.loc[current_date, 'returns'] = (
+                    daily_return = (
                         portfolio.loc[current_date, 'close'] / portfolio.loc[prev_date, 'close'] - 1
                     ) * current_trade['position']
+                    portfolio.loc[current_date, 'returns'] = daily_return
+                    portfolio.loc[current_date, 'portfolio_value'] = (
+                        portfolio.loc[prev_date, 'portfolio_value'] * (1 + daily_return * 0.01)
+                    )
+                else:
+                    portfolio.loc[current_date, 'portfolio_value'] = portfolio.loc[prev_date, 'portfolio_value']
             
             # Close any open trade at the end
             if current_trade is not None:
                 current_trade['exit_date'] = portfolio.index[-1]
                 current_trade['exit_price'] = portfolio.loc[portfolio.index[-1], 'close']
-                current_trade['return'] = (current_trade['exit_price'] / current_trade['entry_price'] - 1) * current_trade['position']
+                trade_return = (current_trade['exit_price'] / current_trade['entry_price'] - 1) * current_trade['position']
+                current_trade['return'] = trade_return
+                current_trade['position_size'] = current_position_size
                 trades.append(current_trade)
             
             # Convert trades to DataFrame
             trades_df = pd.DataFrame(trades)
             
-            # Calculate portfolio value
-            portfolio['portfolio_value'] = self.initial_capital * (1 + portfolio['returns']).cumprod()
-            
             # Calculate performance metrics
-            daily_returns = portfolio['returns']
             total_return = (portfolio['portfolio_value'].iloc[-1] / self.initial_capital) - 1
             
             # Calculate Sharpe ratio (handle division by zero)
+            daily_returns = portfolio['returns']
             if daily_returns.std() != 0:
                 sharpe_ratio = np.sqrt(252) * daily_returns.mean() / daily_returns.std()
             else:
@@ -189,7 +205,7 @@ class Backtester:
     
     def plot_results(self, results: dict = None) -> None:
         """
-        Plot backtest results.
+        Plot backtest results using Plotly.
         
         Args:
             results (dict, optional): Backtest results. If None, uses stored results.
@@ -202,76 +218,125 @@ class Backtester:
                 results = self.results
             
             # Create figure with subplots
-            fig = plt.figure(figsize=(15, 12))
-            gs = plt.GridSpec(4, 1, height_ratios=[2, 1, 1, 1])
+            fig = make_subplots(rows=4, cols=1, 
+                              shared_xaxes=True,
+                              vertical_spacing=0.05,
+                              subplot_titles=('Price and Moving Averages', 
+                                            'RSI Indicator',
+                                            'Equity Curve',
+                                            'Drawdown'),
+                              row_heights=[0.4, 0.2, 0.2, 0.2])
             
             # Plot 1: Price and Moving Averages
-            ax1 = plt.subplot(gs[0])
-            ax1.plot(results['portfolio'].index, results['portfolio']['close'], 'k-', label='Price', alpha=0.7)
-            ax1.plot(results['portfolio'].index, results['portfolio']['fast_ma'], 'b-', label=f'Fast MA ({self.strategy.fast_period})', alpha=0.7)
-            ax1.plot(results['portfolio'].index, results['portfolio']['slow_ma'], 'r-', label=f'Slow MA ({self.strategy.slow_period})', alpha=0.7)
+            fig.add_trace(go.Scatter(x=results['portfolio'].index, 
+                                   y=results['portfolio']['close'],
+                                   name='Price',
+                                   line=dict(color='black')),
+                        row=1, col=1)
             
-            # Plot buy/sell signals with simple annotations
+            fig.add_trace(go.Scatter(x=results['portfolio'].index,
+                                   y=results['portfolio']['fast_ma'],
+                                   name=f'Fast MA ({self.strategy.fast_period})',
+                                   line=dict(color='blue')),
+                        row=1, col=1)
+            
+            fig.add_trace(go.Scatter(x=results['portfolio'].index,
+                                   y=results['portfolio']['slow_ma'],
+                                   name=f'Slow MA ({self.strategy.slow_period})',
+                                   line=dict(color='red')),
+                        row=1, col=1)
+            
+            # Plot trades
             trades_df = results['trades'].copy()
             if not trades_df.empty:
-                # Plot trades
-                for _, trade in trades_df.iterrows():
-                    # Determine if it's a winning or losing trade
-                    is_win = trade['return'] > 0
-                    color = 'green' if is_win else 'red'
-                    marker = '^' if trade['position'] > 0 else 'v'
-                    
-                    # Plot the trade point
-                    ax1.scatter(trade['entry_date'], trade['entry_price'], color=color, marker=marker, s=100)
-                    
-                    # Add W/L annotation
-                    result = 'W' if is_win else 'L'
-                    ax1.annotate(result, 
-                               (trade['entry_date'], trade['entry_price']),
-                               xytext=(0, 10), textcoords='offset points',
-                               ha='center', va='bottom', color=color,
-                               fontsize=10, weight='bold')
-            
-            ax1.set_title('Price and Moving Averages with Trade Signals', fontsize=12, pad=20)
-            ax1.set_ylabel('Price ($)', fontsize=10)
-            ax1.grid(True, alpha=0.3)
-            ax1.legend(loc='upper left', fontsize=8)
+                # Calculate position size
+                position_size = self.initial_capital * 0.01
+                
+                # Add buy signals
+                buy_trades = trades_df[trades_df['position'] > 0]
+                fig.add_trace(go.Scatter(
+                    x=buy_trades['entry_date'],
+                    y=buy_trades['entry_price'],
+                    mode='markers',
+                    name='Buy',
+                    marker=dict(
+                        symbol='triangle-up',
+                        size=10,
+                        color='green'
+                    ),
+                    hovertemplate=(
+                        "Date: %{x}<br>" +
+                        "Price: $%{y:.2f}<br>" +
+                        "Position: LONG<br>" +
+                        f"Position Size: ${position_size:,.2f}<br>" +
+                        "Return: %{customdata:.2f}%<extra></extra>"
+                    ),
+                    customdata=buy_trades['return'] * 100
+                ), row=1, col=1)
+                
+                # Add sell signals
+                sell_trades = trades_df[trades_df['position'] < 0]
+                fig.add_trace(go.Scatter(
+                    x=sell_trades['entry_date'],
+                    y=sell_trades['entry_price'],
+                    mode='markers',
+                    name='Sell',
+                    marker=dict(
+                        symbol='triangle-down',
+                        size=10,
+                        color='red'
+                    ),
+                    hovertemplate=(
+                        "Date: %{x}<br>" +
+                        "Price: $%{y:.2f}<br>" +
+                        "Position: SHORT<br>" +
+                        f"Position Size: ${position_size:,.2f}<br>" +
+                        "Return: %{customdata:.2f}%<extra></extra>"
+                    ),
+                    customdata=sell_trades['return'] * 100
+                ), row=1, col=1)
             
             # Plot 2: RSI
-            ax2 = plt.subplot(gs[1])
-            ax2.plot(results['portfolio'].index, results['portfolio']['rsi'], color='purple', linestyle='-', label='RSI', alpha=0.7)
-            ax2.axhline(y=70, color='r', linestyle='--', alpha=0.3)
-            ax2.axhline(y=30, color='g', linestyle='--', alpha=0.3)
-            ax2.set_title('RSI Indicator', fontsize=12, pad=20)
-            ax2.set_ylabel('RSI', fontsize=10)
-            ax2.grid(True, alpha=0.3)
-            ax2.set_ylim(0, 100)
+            fig.add_trace(go.Scatter(x=results['portfolio'].index,
+                                   y=results['portfolio']['rsi'],
+                                   name='RSI',
+                                   line=dict(color='purple')),
+                        row=2, col=1)
+            
+            # Add RSI levels
+            fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
+            fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
             
             # Plot 3: Equity Curve
-            ax3 = plt.subplot(gs[2])
-            ax3.plot(results['portfolio'].index, results['portfolio']['portfolio_value'], 'b-', label='Equity')
-            ax3.set_title('Equity Curve', fontsize=12, pad=20)
-            ax3.set_ylabel('Portfolio Value ($)', fontsize=10)
-            ax3.grid(True, alpha=0.3)
+            fig.add_trace(go.Scatter(x=results['portfolio'].index,
+                                   y=results['portfolio']['portfolio_value'],
+                                   name='Equity',
+                                   line=dict(color='blue')),
+                        row=3, col=1)
             
-            # Plot 4: Returns
-            ax4 = plt.subplot(gs[3])
-            ax4.plot(results['portfolio'].index, results['portfolio']['returns'].cumsum(), 'g-', label='Cumulative Returns')
-            ax4.set_title('Cumulative Returns', fontsize=12, pad=20)
-            ax4.set_ylabel('Returns (%)', fontsize=10)
-            ax4.grid(True, alpha=0.3)
+            # Plot 4: Drawdown
+            fig.add_trace(go.Scatter(x=results['portfolio'].index,
+                                   y=results['portfolio']['drawdown'] * 100,
+                                   name='Drawdown',
+                                   line=dict(color='red')),
+                        row=4, col=1)
             
-            # Format x-axis dates for all subplots
-            for ax in [ax1, ax2, ax3, ax4]:
-                ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-                ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
-                plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+            # Update layout
+            fig.update_layout(
+                height=1000,
+                title_text="Backtest Results",
+                showlegend=True,
+                hovermode='x unified'
+            )
             
-            plt.tight_layout()
-            plt.show()
+            # Update y-axes labels
+            fig.update_yaxes(title_text="Price ($)", row=1, col=1)
+            fig.update_yaxes(title_text="RSI", row=2, col=1)
+            fig.update_yaxes(title_text="Portfolio Value ($)", row=3, col=1)
+            fig.update_yaxes(title_text="Drawdown (%)", row=4, col=1)
             
-            # Print trade details to terminal
-            self.print_trades(results)
+            # Show the plot
+            fig.show()
             
         except Exception as e:
             logger.error(f"Error plotting results: {str(e)}")
@@ -300,4 +365,53 @@ class Backtester:
         Profit Factor: {self.positions['profit_factor']:.2f}
         """
         
-        return summary 
+        return summary
+
+    def scan_tickers(self, tickers: list, data_provider, lookback_days: int = 5) -> pd.DataFrame:
+        """
+        Scan multiple tickers for potential trading opportunities.
+        
+        Args:
+            tickers (list): List of stock tickers to scan
+            data_provider: Data provider object that can fetch historical data
+            lookback_days (int): Number of days to look back for analysis
+            
+        Returns:
+            pd.DataFrame: DataFrame containing potential opportunities with metrics
+        """
+        opportunities = []
+        
+        for ticker in tickers:
+            try:
+                # Fetch historical data
+                data = data_provider.get_historical_data(ticker, lookback_days)
+                
+                # Generate signals for this ticker
+                signals = self.strategy.generate_signals(data)
+                
+                # Get the latest signal
+                latest_signal = signals['position'].iloc[-1]
+                
+                if latest_signal != 0:  # If there's a trading signal
+                    # Calculate additional metrics
+                    current_price = data['close'].iloc[-1]
+                    rsi = data['rsi'].iloc[-1] if 'rsi' in data.columns else None
+                    momentum = data['momentum'].iloc[-1] if 'momentum' in data.columns else None
+                    
+                    opportunity = {
+                        'ticker': ticker,
+                        'signal': 'LONG' if latest_signal > 0 else 'SHORT',
+                        'current_price': current_price,
+                        'rsi': rsi,
+                        'momentum': momentum,
+                        'timestamp': data.index[-1]
+                    }
+                    opportunities.append(opportunity)
+                    
+            except Exception as e:
+                logger.warning(f"Error scanning {ticker}: {str(e)}")
+                continue
+        
+        if opportunities:
+            return pd.DataFrame(opportunities)
+        return pd.DataFrame(columns=['ticker', 'signal', 'current_price', 'rsi', 'momentum', 'timestamp']) 

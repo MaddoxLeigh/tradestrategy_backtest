@@ -116,19 +116,21 @@ class MovingAverageCrossoverStrategy(BaseStrategy):
             signals['position'] = 0
             
             # Generate signals using vectorized operations
-            # Buy signals: Fast MA crosses above Slow MA and (RSI is oversold or price momentum is positive)
+            # Buy signals: Fast MA crosses above Slow MA OR RSI is oversold
             fast_ma_crosses_up = (data['fast_ma'] > data['slow_ma']) & (data['fast_ma'].shift(1) <= data['slow_ma'].shift(1))
             rsi_oversold = data['rsi'] < self.rsi_oversold
-            price_momentum = data['momentum'] > 0
+            price_momentum = data['momentum'] > 0.01  # 1% momentum threshold
             
-            # Sell signals: Fast MA crosses below Slow MA and (RSI is overbought or price momentum is negative)
+            # Sell signals: Fast MA crosses below Slow MA OR RSI is overbought
             fast_ma_crosses_down = (data['fast_ma'] < data['slow_ma']) & (data['fast_ma'].shift(1) >= data['slow_ma'].shift(1))
             rsi_overbought = data['rsi'] > self.rsi_overbought
-            price_momentum_negative = data['momentum'] < 0
+            price_momentum_negative = data['momentum'] < -0.01  # -1% momentum threshold
             
             # Set positions using boolean indexing
-            signals.loc[fast_ma_crosses_up & (rsi_oversold | price_momentum), 'position'] = 1
-            signals.loc[fast_ma_crosses_down & (rsi_overbought | price_momentum_negative), 'position'] = -1
+            # Buy if any of these conditions are met
+            signals.loc[fast_ma_crosses_up | rsi_oversold | price_momentum, 'position'] = 1
+            # Sell if any of these conditions are met
+            signals.loc[fast_ma_crosses_down | rsi_overbought | price_momentum_negative, 'position'] = -1
             
             # Fill NaN values with 0 (no position)
             signals['position'] = signals['position'].fillna(0)
@@ -141,6 +143,7 @@ class MovingAverageCrossoverStrategy(BaseStrategy):
             signals['fast_ma'] = data['fast_ma']
             signals['slow_ma'] = data['slow_ma']
             signals['rsi'] = data['rsi']
+            signals['momentum'] = data['momentum']
             
             return signals
             
