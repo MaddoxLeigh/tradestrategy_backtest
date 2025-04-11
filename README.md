@@ -93,18 +93,19 @@ class MyCustomStrategy(BaseStrategy):
 ### Data Requirements
 The framework expects historical price data in the following format:
 
-| Column    | Description                |
-|-----------|----------------------------|
-| timestamp | Date and time of the price |
-| open      | Opening price             |
-| high      | Highest price             |
-| low       | Lowest price              |
-| close     | Closing price             |
-| volume    | Trading volume            |
+| Column    | Type      | Description                |
+|-----------|-----------|----------------------------|
+| timestamp | datetime  | Date and time of the price |
+| open      | float     | Opening price             |
+| high      | float     | Highest price             |
+| low       | float     | Lowest price              |
+| close     | float     | Closing price             |
+| volume    | int       | Trading volume            |
 
-
-
-s equity curve and trades
+### Visualization
+The backtester provides visualization tools:
+```python
+backtester.plot_results()  # Shows equity curve and trades
 ```
 
 ## Project Structure
