@@ -8,8 +8,8 @@ A backtesting framework for implementing and testing trading strategies. This pr
 - Moving Average Crossover strategy with RSI and momentum filters
 - Yahoo Finance data integration
 - Performance metrics calculation
-- Trade analysis and visualization
-- Parameter optimization framework
+- Trade analysis and visualisation
+- Parameter optimisation framework
 
 ## Installation
 
