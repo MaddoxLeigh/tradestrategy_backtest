@@ -1,72 +1,110 @@
 # Trading Strategy Backtester
 
-A simple but powerful tool to test trading strategies using real market data. This project helps you backtest the Moving Average Crossover strategy with RSI and momentum filters.
+A professional-grade backtesting framework for implementing and testing trading strategies. This project provides a robust implementation of the Moving Average Crossover strategy with RSI and momentum filters.
 
-## What's Inside
-- 📈 Moving Average Crossover strategy with RSI and momentum
-- 📊 Real-time data from Yahoo Finance
-- 📉 Performance tracking and visualization
-- 🎯 Trade analysis and statistics
+## Technical Overview
 
-## Quick Start
-1. Install the requirements:
+### Core Components
+- Moving Average Crossover strategy with RSI and momentum filters
+- Yahoo Finance data integration
+- Performance metrics calculation
+- Trade analysis and visualization
+- Parameter optimization framework
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/MaddoxLeigh/tradestrategy_backtest.git
+cd tradestrategy_backtest
+```
+
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Run the strategy:
+## Implementation Details
+
+### Strategy Components
+- **Moving Averages**: 10 and 20-period EMAs for trend identification
+- **RSI**: 14-period window for momentum analysis
+- **Price Momentum**: 5-period lookback for trend confirmation
+
+### Signal Generation
+- Long entry: EMA crossover + RSI < 30 or momentum > 2%
+- Short entry: EMA crossunder + RSI > 70 or momentum < -2%
+
+### Performance Metrics
+- Total return
+- Sharpe ratio
+- Maximum drawdown
+- Win rate
+- Profit factor
+- Average trade return
+
+## Usage
+
+1. Run the strategy:
 ```bash
 python run_strategy.py
 ```
 
-3. Enter a stock symbol when prompted (e.g., AAPL, TSLA, MSFT)
+2. Enter a stock symbol when prompted (e.g., AAPL, TSLA, MSFT)
 
-## How It Works
-The strategy looks at three main things to make trading decisions:
-1. Moving averages (trend following)
-2. RSI (momentum indicator)
-3. Price momentum
-
-When all conditions line up, it gives you a buy or sell signal. The backtester then:
-- Tracks your trades
-- Calculates your returns
-- Shows you detailed performance metrics
-- Creates nice visualizations of your results
-
-## Features
-- 🚀 Easy to use interface
-- 📱 Works with any stock on Yahoo Finance
-- 📊 Shows detailed trade information
-- 📈 Creates beautiful charts of your results
-- 💰 Tracks performance metrics like:
-  - Total return
-  - Win rate
-  - Sharpe ratio
-  - Maximum drawdown
-  - Profit factor
+3. View results:
+- Equity curve
+- Trade history
+- Performance metrics
+- Technical indicators
 
 ## Project Structure
 ```
 project/
-├── src/                    # Main code
+├── src/                    # Source code
 │   ├── strategies/        # Trading strategies
 │   ├── backtester.py     # Backtesting engine
-│   └── utils/            # Helper functions
+│   └── utils/            # Utility functions
 ├── docs/                  # Documentation
-└── requirements.txt       # Python packages needed
+├── examples/             # Example scripts
+└── requirements.txt      # Dependencies
 ```
 
-## Tips for Best Results
-1. Start with well-known stocks (AAPL, MSFT, TSLA)
-2. Use the last 6 months of data for testing
-3. Pay attention to the win rate and profit factor
-4. Look at the charts to understand when the strategy works best
+## Technical Requirements
+- Python 3.8+
+- pandas
+- numpy
+- matplotlib
+- yfinance
+- scipy
 
-## Need Help?
-Check out the detailed strategy explanation in `docs/strategy_explanation.md` to understand exactly how the strategy works.
+## Development
+1. Fork the repository
+2. Create a feature branch
+3. Implement changes
+4. Run tests
+5. Submit a pull request
 
-## Remember
-- This is a tool for testing and learning
-- Past performance doesn't guarantee future results
-- Always do your own research
-- Start with paper trading before using real money 
+## Testing
+Run the test suite:
+```bash
+python -m pytest tests/
+```
+
+## Performance Optimization
+- Vectorized operations for signal generation
+- Efficient data handling with pandas
+- Optimized parameter search
+- Memory-efficient backtesting
+
+## Contributing
+1. Follow PEP 8 style guide
+2. Add tests for new features
+3. Update documentation
+4. Maintain backward compatibility 
