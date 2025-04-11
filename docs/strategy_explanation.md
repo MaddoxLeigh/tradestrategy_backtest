@@ -116,36 +116,9 @@ Price went down 2.1% in last 5 days
 Result: SELL signal! 📉
 ```
 
-## Why This Strategy Works
-1. **Multiple Confirmations**: It doesn't just use one indicator, but three different ways to confirm a trade
-2. **Trend Following**: The moving averages help you ride the trend
-3. **Momentum Catching**: RSI and price momentum help you catch moves early
-4. **Risk Management**: The multiple confirmations help reduce false signals
-
-## Tips for Using This Strategy
-1. **Best for Trending Markets**: Works great when stocks are making clear moves up or down
-2. **Watch Out for Sideways Markets**: Can give false signals when prices are moving sideways
-3. **Adjust Parameters**: You can change the MA periods (10/20) to make it more or less sensitive
-4. **Use Stop Losses**: Always protect your trades with stop losses
-5. **Start Small**: Test with small positions first to see how it works for you
-
-## Common Questions
-1. **Why 10 and 20 days for MAs?**
-   - 10 days catches short-term trends
-   - 20 days shows the bigger picture
-   - You can adjust these based on your trading style
-
-2. **What if all signals don't line up perfectly?**
-   - The strategy requires all conditions to be met
-   - This helps avoid false signals but might mean fewer trades
-
-3. **How much should I risk per trade?**
-   - Start with 1-2% of your account per trade
-   - Adjust based on your risk tolerance
 
 ## Remember
-- No strategy is perfect
-- Always do your own research
-- Start with paper trading
-- Keep track of your results
-- Be patient - good trades take time to develop 
+- This is for educational and experimental purposes only
+- Past performance does not guarantee future results
+- You should not risk capital using this strategy
+- The author is not responsible for any trading losses or damages

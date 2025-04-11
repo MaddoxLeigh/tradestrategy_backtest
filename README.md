@@ -1,6 +1,6 @@
 # Trading Strategy Backtester
 
-A professional-grade backtesting framework for implementing and testing trading strategies. This project provides a robust implementation of the Moving Average Crossover strategy with RSI and momentum filters.
+A backtesting framework for implementing and testing trading strategies. This project provides an implementation of the Moving Average Crossover strategy with RSI and momentum filters.
 
 ## Technical Overview
 
@@ -64,6 +64,49 @@ python run_strategy.py
 - Performance metrics
 - Technical indicators
 
+## Advanced Usage
+
+### Creating Custom Strategies
+To create a custom strategy, inherit from the `BaseStrategy` class and implement the `generate_signals` method:
+
+```python
+from src.strategies.base_strategy import BaseStrategy
+from src.indicators.technical_indicators import TechnicalIndicators
+
+class MyCustomStrategy(BaseStrategy):
+    def __init__(self, param1: int, param2: float):
+        super().__init__()
+        self.param1 = param1
+        self.param2 = param2
+        self.indicators = TechnicalIndicators()
+    
+    def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
+        # Implement your strategy logic here
+        signals = pd.DataFrame(index=data.index)
+        signals['position'] = 0  # Initialize positions
+        
+        # Your strategy logic here
+        
+        return signals
+```
+
+### Data Requirements
+The framework expects historical price data in the following format:
+
+| Column    | Description                |
+|-----------|----------------------------|
+| timestamp | Date and time of the price |
+| open      | Opening price             |
+| high      | Highest price             |
+| low       | Lowest price              |
+| close     | Closing price             |
+| volume    | Trading volume            |
+
+
+
+s equity curve and trades
+```
+
 ## Project Structure
 ```
 project/
@@ -76,35 +119,6 @@ project/
 └── requirements.txt      # Dependencies
 ```
 
-## Technical Requirements
-- Python 3.8+
-- pandas
-- numpy
-- matplotlib
-- yfinance
-- scipy
 
-## Development
-1. Fork the repository
-2. Create a feature branch
-3. Implement changes
-4. Run tests
-5. Submit a pull request
 
-## Testing
-Run the test suite:
-```bash
-python -m pytest tests/
-```
 
-## Performance Optimization
-- Vectorized operations for signal generation
-- Efficient data handling with pandas
-- Optimized parameter search
-- Memory-efficient backtesting
-
-## Contributing
-1. Follow PEP 8 style guide
-2. Add tests for new features
-3. Update documentation
-4. Maintain backward compatibility 
