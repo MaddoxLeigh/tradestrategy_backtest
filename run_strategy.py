@@ -11,6 +11,26 @@ import sys
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def get_timeframe_days(timeframe: str) -> int:
+    """
+    Convert timeframe string to number of days.
+    
+    Args:
+        timeframe (str): Selected timeframe (e.g., '6m', '1y', '2y')
+        
+    Returns:
+        int: Number of days
+    """
+    timeframe_map = {
+        '1m': 30,
+        '3m': 90,
+        '6m': 180,
+        '1y': 365,
+        '2y': 730,
+        '5y': 1825
+    }
+    return timeframe_map.get(timeframe, 180)  # Default to 6 months if invalid
+
 def fetch_data(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
     """
     Fetch stock data from Yahoo Finance.
@@ -55,9 +75,35 @@ def fetch_data(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
         raise
 
 def main():
-    # Set date range for last 6 months
+    # Get timeframe from user
+    print("\nSelect timeframe for backtest:")
+    print("1. 1 Month")
+    print("2. 3 Months")
+    print("3. 6 Months")
+    print("4. 1 Year")
+    print("5. 2 Years")
+    print("6. 5 Years")
+    
+    timeframe_map = {
+        '1': '1m',
+        '2': '3m',
+        '3': '6m',
+        '4': '1y',
+        '5': '2y',
+        '6': '5y'
+    }
+    
+    while True:
+        choice = input("\nEnter your choice (1-6): ")
+        if choice in timeframe_map:
+            timeframe = timeframe_map[choice]
+            break
+        print("Please enter a valid choice (1-6)")
+    
+    # Set date range based on selected timeframe
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=180)  # 6 months ago
+    days = get_timeframe_days(timeframe)
+    start_date = end_date - timedelta(days=days)
     
     # Format dates as strings
     start_date_str = start_date.strftime('%Y-%m-%d')
