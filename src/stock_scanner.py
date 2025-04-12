@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import Dict, Any, List
 from trading_recommender import TradingRecommender
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,8 +26,10 @@ class StockScanner:
         if stocks is None:
             # Read S&P 500 symbols from CSV
             try:
-                sp500_df = pd.read_csv('sp500.csv')
-                self.stocks = sp500_df['Symbol'].tolist()
+                ## Add csv with desired stock tickers 
+                #sp500_df = pd.read_csv('sp500.csv')
+                etoro_df = pd.read_csv('etoro-stocks.csv')
+                self.stocks = etoro_df['Ticker'].tolist()
                 logger.info(f"Loaded {len(self.stocks)} stocks from S&P 500")
             except Exception as e:
                 logger.error(f"Error loading S&P 500 symbols: {str(e)}")
@@ -44,6 +47,15 @@ class StockScanner:
             List[Dict[str, Any]]: List of recommendations sorted by confidence
         """
         recommendations = []
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"stock_recommendations_{timestamp}.csv"
+        output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
+        
+        # Create output directory if it doesn't exist
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        filepath = os.path.join(output_dir, filename)
         
         for ticker in self.stocks:
             try:
@@ -72,46 +84,111 @@ class StockScanner:
                 else:
                     tp = sl = current_price
                 
-                # Add to recommendations
-                recommendations.append({
+                # Create recommendation dictionary
+                recommendation = {
                     'ticker': ticker,
                     'price': current_price,
                     'signal': result['recommendation'],
                     'confidence': result['confidence_score'],
                     'tp': tp,
-                    'sl': sl
-                })
+                    'sl': sl,
+                    'timestamp': datetime.now()
+                }
+                
+                # Add to recommendations list
+                recommendations.append(recommendation)
+                
+                # Sort recommendations by confidence
+                recommendations.sort(key=lambda x: x['confidence'], reverse=True)
+                
+                # Write current state to CSV
+                df = pd.DataFrame(recommendations)
+                df.to_csv(filepath, index=False)
+                logger.info(f"Updated CSV with {ticker} recommendation")
                 
             except Exception as e:
                 logger.error(f"Error scanning {ticker}: {str(e)}")
                 continue
         
-        # Sort by confidence (highest first)
-        recommendations.sort(key=lambda x: x['confidence'], reverse=True)
         return recommendations
+
+    def write_recommendations_to_csv(self, recommendations: List[Dict[str, Any]], filename: str = None) -> str:
+        """
+        Write recommendations to a CSV file.
+        
+        Args:
+            recommendations (List[Dict[str, Any]]): List of recommendations to write
+            filename (str, optional): Name of the CSV file. If None, generates a timestamp-based name.
+        
+        Returns:
+            str: Path to the created CSV file
+        """
+        try:
+            logger.info(f"Starting to write {len(recommendations)} recommendations to CSV")
+            
+            if filename is None:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"stock_recommendations_{timestamp}.csv"
+                logger.info(f"Generated filename: {filename}")
+            
+            # Create output directory if it doesn't exist
+            output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
+            logger.info(f"Checking/creating output directory: {output_dir}")
+            
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+                logger.info(f"Created output directory: {output_dir}")
+            
+            filepath = os.path.join(output_dir, filename)
+            logger.info(f"Full filepath: {filepath}")
+            
+            # Convert recommendations to DataFrame
+            logger.info("Converting recommendations to DataFrame")
+            df = pd.DataFrame(recommendations)
+            
+            # Add timestamp column
+            df['timestamp'] = datetime.now()
+            
+            # Write to CSV
+            logger.info(f"Writing to CSV file: {filepath}")
+            df.to_csv(filepath, index=False)
+            logger.info(f"Successfully wrote recommendations to {filepath}")
+            
+            return filepath
+        except Exception as e:
+            logger.error(f"Error writing to CSV: {str(e)}")
+            raise
 
 def main():
     """
     Main function to run the stock scanner.
     """
-    # Initialize scanner
-    scanner = StockScanner()
-    
-    # Scan stocks
-    print("\nScanning S&P 500 stocks...")
-    recommendations = scanner.scan_stocks()
-    
-    # Print results
-    print("\nTrading Recommendations (Sorted by Confidence)")
-    print("=" * 100)
-    print(f"{'Ticker':<8} {'Price':>10} {'Signal':<8} {'Confidence':>10} {'Take Profit':>12} {'Stop Loss':>12}")
-    print("-" * 100)
-    
-    for rec in recommendations:
-        print(f"{rec['ticker']:<8} ${rec['price']:>9,.2f} {rec['signal']:<8} {rec['confidence']:>9.1f}% "
-              f"${rec['tp']:>11,.2f} ${rec['sl']:>11,.2f}")
-    
-    print("=" * 100)
+    try:
+        # Initialize scanner
+        logger.info("Initializing stock scanner")
+        scanner = StockScanner()
+        
+        # Scan stocks
+        logger.info("Starting stock scan")
+        print("\nScanning S&P 500 stocks...")
+        recommendations = scanner.scan_stocks()
+        logger.info(f"Found {len(recommendations)} recommendations")
+        
+        # Print results
+        print("\nTrading Recommendations (Sorted by Confidence)")
+        print("=" * 100)
+        print(f"{'Ticker':<8} {'Price':>10} {'Signal':<8} {'Confidence':>10} {'Take Profit':>12} {'Stop Loss':>12}")
+        print("-" * 100)
+        
+        for rec in recommendations:
+            print(f"{rec['ticker']:<8} ${rec['price']:>9,.2f} {rec['signal']:<8} {rec['confidence']:>9.1f}% "
+                  f"${rec['tp']:>11,.2f} ${rec['sl']:>11,.2f}")
+        
+        print("=" * 100)
+        print(f"\nRecommendations have been saved to: output/stock_recommendations_*.csv")
+    except Exception as e:
+        logger.error(f"Error in main function: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     main() 
